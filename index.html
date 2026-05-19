@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoJournal</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #080b14;
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* ШАПКА */
+        .header {
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            backdrop-filter: blur(20px);
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #f0b90b, #f8d03b);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .header-badge {
+            background: rgba(240, 185, 11, 0.15);
+            color: #f0b90b;
+            border: 1px solid rgba(240, 185, 11, 0.3);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* ОСНОВНОЙ КОНТЕНТ */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+
+        /* КАРТОЧКИ СТАТИСТИКИ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 20px;
+            transition: border-color 0.2s;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(240, 185, 11, 0.3);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .stat-value.profit { color: #22c55e; }
+        .stat-value.loss { color: #ef4444; }
+
+        .stat-icon {
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        /* ГРАФИК */
+        .chart-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ФОРМА ДОБАВЛЕНИЯ */
+        .form-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr) auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-label {
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            width: 100%;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #f0b90b;
+            background: rgba(240, 185, 11, 0.05);
+        }
+
+        input::placeholder { color: #475569; }
+
+        .btn-add {
+            background: linear-gradient(135deg, #f0b90b, #f8d03b);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .btn-add:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-add:active { transform: translateY(0); }
+
+        .btn-refresh {
+            background: transparent;
+            color: #f0b90b;
+            border: 1px solid rgba(240, 185, 11, 0.4);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-refresh:hover {
+            background: rgba(240, 185, 11, 0.1);
+        }
+
+        /* ТАБЛИЦА СДЕЛОК */
+        .trades-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .trades-header {
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 11px;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        td {
+            padding: 14px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+
+        tr:last-child td { border-bottom: none; }
+
+        tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .coin-badge {
+            background: rgba(240, 185, 11, 0.15);
+            color: #f0b90b;
+            border: 1px solid rgba(240, 185, 11, 0.2);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .profit { color: #22c55e; font-weight: 600; }
+        .loss { color: #ef4444; font-weight: 600; }
+       .btn-diary {
+    background: rgba(99, 102, 241, 0.1);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.btn-diary:hover {
+    background: rgba(99, 102, 241, 0.2);
+}
+
+.btn-diary:hover {
+    background: rgba(99, 102, 241, 0.2);
+}
+
+/* МОДАЛЬНОЕ ОКНО */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal {
+    background: #0f172a;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 28px;
+    width: 90%;
+    max-width: 560px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.modal-coin {
+    background: rgba(240, 185, 11, 0.15);
+    color: #f0b90b;
+    border: 1px solid rgba(240, 185, 11, 0.2);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.btn-close {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #94a3b8;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-close:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}
+
+.diary-entries {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.diary-entry {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.diary-entry-date {
+    font-size: 11px;
+    color: #475569;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.diary-entry-text {
+    font-size: 14px;
+    color: #e2e8f0;
+    line-height: 1.5;
+}
+
+.diary-entry-delete {
+    background: none;
+    border: none;
+    color: #475569;
+    cursor: pointer;
+    font-size: 12px;
+    float: right;
+    padding: 0;
+    transition: color 0.2s;
+}
+
+.diary-entry-delete:hover {
+    color: #ef4444;
+}
+
+.diary-input-area {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.diary-textarea {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    width: 100%;
+    resize: vertical;
+    min-height: 100px;
+    outline: none;
+    font-family: inherit;
+    line-height: 1.5;
+    transition: border-color 0.2s;
+}
+
+.diary-textarea:focus {
+    border-color: #818cf8;
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.diary-textarea::placeholder { color: #475569; }
+
+.btn-save-entry {
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    color: #fff;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    align-self: flex-end;
+}
+
+.btn-save-entry:hover { opacity: 0.9; }
+
+.empty-diary {
+    text-align: center;
+    padding: 30px;
+    color: #475569;
+    font-size: 14px;
+}
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #475569;
+        }
+
+        .empty-state .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state p {
+            font-size: 15px;
+        }
+
+        .loading-text {
+            text-align: center;
+            padding: 40px;
+            color: #475569;
+            font-size: 14px;
+        }
+
+        /* МОБИЛЬНЫЙ ВИД */
+        @media (max-width: 700px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .form-grid .btn-add {
+                grid-column: 1 / -1;
+            }
+
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+
+            thead tr { display: none; }
+
+            tbody tr {
+                background: rgba(255,255,255,0.02);
+                border-bottom: 1px solid rgba(255,255,255,0.06);
+                padding: 12px 16px;
+            }
+
+            td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 6px 0;
+                border: none;
+                font-size: 13px;
+            }
+
+            td::before {
+                content: attr(data-label);
+                color: #475569;
+                font-size: 11px;
+                text-transform: uppercase;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ШАПКА -->
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">📊</div>
+            CryptoJournal
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="btn-refresh" onclick="loadPrices()">🔄 Обновить</button>
+<button class="btn-refresh" onclick="exportCSV()">📥 Экспорт CSV</button>
+            <div class="header-badge">Beta</div>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <!-- СТАТИСТИКА -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">💼</div>
+                <div class="stat-label">Сделок</div>
+                <div class="stat-value" id="stat-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💵</div>
+                <div class="stat-label">Вложено</div>
+                <div class="stat-value" id="stat-invested">$0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📈</div>
+                <div class="stat-label">Сейчас стоит</div>
+                <div class="stat-value" id="stat-current">$0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-label">Прибыль / Убыток</div>
+                <div class="stat-value" id="stat-pnl">$0</div>
+            </div>
+        </div>
+
+        <!-- ГРАФИК -->
+        <div class="chart-card" id="chart-card" style="display:none;">
+            <div class="card-title">📈 История портфеля</div>
+            <canvas id="portfolioChart" height="80"></canvas>
+        </div>
+
+        <!-- ФОРМА -->
+        <div class="form-card">
+            <div class="card-title">➕ Добавить сделку</div>
+            <div class="form-grid">
+                <div class="input-group">
+    <div class="input-label">Монета</div>
+    <select id="coin" style="
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #fff;
+        padding: 12px 14px;
+        border-radius: 10px;
+        font-size: 14px;
+        width: 100%;
+        outline: none;
+        cursor: pointer;
+        transition: border-color 0.2s;
+    ">
+        <option value="" disabled selected style="background:#0f172a">Выбери монету...</option>
+
+        <optgroup label="⭐ Топ монеты" style="background:#0f172a">
+            <option value="BTC" style="background:#0f172a">BTC — Bitcoin</option>
+            <option value="ETH" style="background:#0f172a">ETH — Ethereum</option>
+            <option value="BNB" style="background:#0f172a">BNB — BNB</option>
+            <option value="SOL" style="background:#0f172a">SOL — Solana</option>
+            <option value="XRP" style="background:#0f172a">XRP — Ripple</option>
+            <option value="ADA" style="background:#0f172a">ADA — Cardano</option>
+            <option value="DOGE" style="background:#0f172a">DOGE — Dogecoin</option>
+            <option value="TON" style="background:#0f172a">TON — Toncoin</option>
+            <option value="AVAX" style="background:#0f172a">AVAX — Avalanche</option>
+            <option value="MATIC" style="background:#0f172a">MATIC — Polygon</option>
+            <option value="DOT" style="background:#0f172a">DOT — Polkadot</option>
+            <option value="LTC" style="background:#0f172a">LTC — Litecoin</option>
+            <option value="LINK" style="background:#0f172a">LINK — Chainlink</option>
+            <option value="UNI" style="background:#0f172a">UNI — Uniswap</option>
+            <option value="ATOM" style="background:#0f172a">ATOM — Cosmos</option>
+        </optgroup>
+
+        <optgroup label="🆕 Новые популярные" style="background:#0f172a">
+            <option value="SUI" style="background:#0f172a">SUI — Sui</option>
+            <option value="ARB" style="background:#0f172a">ARB — Arbitrum</option>
+            <option value="OP" style="background:#0f172a">OP — Optimism</option>
+            <option value="WLD" style="background:#0f172a">WLD — Worldcoin</option>
+            <option value="INJ" style="background:#0f172a">INJ — Injective</option>
+            <option value="TIA" style="background:#0f172a">TIA — Celestia</option>
+            <option value="APT" style="background:#0f172a">APT — Aptos</option>
+            <option value="SEI" style="background:#0f172a">SEI — Sei</option>
+            <option value="JUP" style="background:#0f172a">JUP — Jupiter</option>
+            <option value="PYTH" style="background:#0f172a">PYTH — Pyth Network</option>
+            <option value="STRK" style="background:#0f172a">STRK — Starknet</option>
+            <option value="MANTA" style="background:#0f172a">MANTA — Manta Network</option>
+            <option value="ALT" style="background:#0f172a">ALT — AltLayer</option>
+        </optgroup>
+
+        <optgroup label="🏦 DeFi" style="background:#0f172a">
+            <option value="AAVE" style="background:#0f172a">AAVE — Aave</option>
+            <option value="MKR" style="background:#0f172a">MKR — Maker</option>
+            <option value="SNX" style="background:#0f172a">SNX — Synthetix</option>
+            <option value="CRV" style="background:#0f172a">CRV — Curve</option>
+            <option value="COMP" style="background:#0f172a">COMP — Compound</option>
+            <option value="BAL" style="background:#0f172a">BAL — Balancer</option>
+            <option value="SUSHI" style="background:#0f172a">SUSHI — SushiSwap</option>
+            <option value="1INCH" style="background:#0f172a">1INCH — 1inch</option>
+            <option value="LDO" style="background:#0f172a">LDO — Lido DAO</option>
+            <option value="RPL" style="background:#0f172a">RPL — Rocket Pool</option>
+        </optgroup>
+
+        <optgroup label="⛓️ Layer 1" style="background:#0f172a">
+            <option value="NEAR" style="background:#0f172a">NEAR — Near Protocol</option>
+            <option value="FTM" style="background:#0f172a">FTM — Fantom</option>
+            <option value="ALGO" style="background:#0f172a">ALGO — Algorand</option>
+            <option value="XTZ" style="background:#0f172a">XTZ — Tezos</option>
+            <option value="EOS" style="background:#0f172a">EOS — EOS</option>
+            <option value="XLM" style="background:#0f172a">XLM — Stellar</option>
+            <option value="VET" style="background:#0f172a">VET — VeChain</option>
+            <option value="HBAR" style="background:#0f172a">HBAR — Hedera</option>
+            <option value="ICP" style="background:#0f172a">ICP — Internet Computer</option>
+            <option value="FIL" style="background:#0f172a">FIL — Filecoin</option>
+        </optgroup>
+
+        <optgroup label="🐸 Мемкоины" style="background:#0f172a">
+            <option value="PEPE" style="background:#0f172a">PEPE — Pepe</option>
+            <option value="SHIB" style="background:#0f172a">SHIB — Shiba Inu</option>
+            <option value="FLOKI" style="background:#0f172a">FLOKI — Floki</option>
+            <option value="BONK" style="background:#0f172a">BONK — Bonk</option>
+            <option value="WIF" style="background:#0f172a">WIF — Dogwifhat</option>
+            <option value="BRETT" style="background:#0f172a">BRETT — Brett</option>
+        </optgroup>
+
+        <optgroup label="🤖 AI & Web3" style="background:#0f172a">
+            <option value="RNDR" style="background:#0f172a">RNDR — Render</option>
+            <option value="FET" style="background:#0f172a">FET — Fetch.ai</option>
+            <option value="AGIX" style="background:#0f172a">AGIX — SingularityNET</option>
+            <option value="GRT" style="background:#0f172a">GRT — The Graph</option>
+        </optgroup>
+
+    </select>
+</div>
+                <div class="input-group">
+                    <div class="input-label">Цена входа ($)</div>
+                    <input type="number" id="price" placeholder="95000">
+                </div>
+                <div class="input-group">
+                    <div class="input-label">Количество</div>
+                    <input type="number" id="amount" placeholder="0.01">
+                </div>
+                <div class="input-group">
+                    <div class="input-label">Заметка</div>
+                    <input type="text" id="note" placeholder="Почему купил?">
+                </div>
+                <button class="btn-add" onclick="addTrade()">Добавить</button>
+            </div>
+        </div>
+
+        <!-- ТАБЛИЦА -->
+        <div class="trades-card">
+            <div class="trades-header">
+                <div class="card-title" style="margin:0;">📋 Мои сделки</div>
+            </div>
+            <div id="trades-container">
+                <div class="empty-state">
+                    <div class="empty-icon">🪙</div>
+                    <p>Сделок пока нет — добавь первую!</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+<!-- МОДАЛЬНОЕ ОКНО ДНЕВНИКА -->
+<div class="modal-overlay" id="diaryModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div class="modal-title">📓 Дневник сделки</div>
+                <div class="modal-coin" id="diaryModalCoin">BTC</div>
+            </div>
+            <button class="btn-close" onclick="closeDiary()">✕</button>
+        </div>
+
+        <div class="diary-entries" id="diaryEntries"></div>
+
+        <div class="diary-input-area">
+            <textarea
+                class="diary-textarea"
+                id="diaryText"
+                placeholder="Запиши своё наблюдение по сделке... Например: цена упала на 5%, держу позицию потому что фундаментал не изменился."
+            ></textarea>
+            <button class="btn-save-entry" onclick="saveDiaryEntry()">Сохранить запись</button>
+        </div>
+    </div>
+</div>
+    <script>
+        const coinIds = {
+    // Топ монеты
+    'BTC': 'bitcoin',
+    'ETH': 'ethereum',
+    'BNB': 'binancecoin',
+    'SOL': 'solana',
+    'XRP': 'ripple',
+    'ADA': 'cardano',
+    'DOGE': 'dogecoin',
+    'TON': 'the-open-network',
+    'AVAX': 'avalanche-2',
+    'MATIC': 'matic-network',
+    'DOT': 'polkadot',
+    'LTC': 'litecoin',
+    'LINK': 'chainlink',
+    'UNI': 'uniswap',
+    'ATOM': 'cosmos',
+    // Новые популярные
+    'SUI': 'sui',
+    'ARB': 'arbitrum',
+    'OP': 'optimism',
+    'PEPE': 'pepe',
+    'WLD': 'worldcoin-wld',
+    'INJ': 'injective-protocol',
+    'TIA': 'celestia',
+    'APT': 'aptos',
+    'SEI': 'sei-network',
+    'JUP': 'jupiter-exchange-solana',
+    'PYTH': 'pyth-network',
+    'STRK': 'starknet',
+    'MANTA': 'manta-network',
+    'ALT': 'altlayer',
+    // DeFi
+    'AAVE': 'aave',
+    'MKR': 'maker',
+    'SNX': 'havven',
+    'CRV': 'curve-dao-token',
+    'COMP': 'compound-governance-token',
+    'BAL': 'balancer',
+    'SUSHI': 'sushi',
+    '1INCH': '1inch',
+    // Layer 1
+    'NEAR': 'near',
+    'FTM': 'fantom',
+    'ALGO': 'algorand',
+    'XTZ': 'tezos',
+    'EOS': 'eos',
+    'XLM': 'stellar',
+    'VET': 'vechain',
+    'HBAR': 'hedera-hashgraph',
+    'ICP': 'internet-computer',
+    'FIL': 'filecoin',
+    // Мемкоины
+    'SHIB': 'shiba-inu',
+    'FLOKI': 'floki',
+    'BONK': 'bonk',
+    'WIF': 'dogwifcoin',
+    'BRETT': 'based-brett',
+    // Другие
+    'GRT': 'the-graph',
+    'LDO': 'lido-dao',
+    'RPL': 'rocket-pool',
+    'RNDR': 'render-token',
+    'FET': 'fetch-ai',
+    'AGIX': 'singularitynet'
+};
+
+        let trades = JSON.parse(localStorage.getItem('trades')) || [];
+        let priceHistory = JSON.parse(localStorage.getItem('priceHistory')) || [];
+        let currentPrices = {};
+        let chart = null;
+
+        renderTrades();
+        renderStats();
+
+        if (trades.length > 0) loadPrices();
+
+        setInterval(() => { if (trades.length > 0) loadPrices(); }, 30000);
+
+        function addTrade() {
+            let coin = document.getElementById('coin').value;
+            let price = document.getElementById('price').value;
+            let amount = document.getElementById('amount').value;
+            let note = document.getElementById('note').value;
+
+            if (!coin || !price || !amount) {
+                alert('Заполни монету, цену и количество!');
+                return;
+            }
+
+            if (!coinIds[coin]) {
+                alert('Монета ' + coin + ' не найдена.\n\nДоступны: ' + Object.keys(coinIds).join(', '));
+                return;
+            }
+
+            trades.push({
+                coin,
+                price: parseFloat(price),
+                amount: parseFloat(amount),
+                note,
+                date: new Date().toLocaleDateString('ru-RU')
+            });
+
+            localStorage.setItem('trades', JSON.stringify(trades));
+
+            document.getElementById('coin').selectedIndex = 0;
+document.getElementById('price').value = '';
+document.getElementById('amount').value = '';
+document.getElementById('note').value = '';
+
+            renderTrades();
+            renderStats();
+            loadPrices();
+        }
+
+        function deleteTrade(index) {
+            if (!confirm('Удалить сделку?')) return;
+            trades.splice(index, 1);
+            localStorage.setItem('trades', JSON.stringify(trades));
+            renderTrades();
+            renderStats();
+        }
+
+        async function loadPrices() {
+            if (trades.length === 0) return;
+
+            let uniqueCoins = [...new Set(trades.map(t => t.coin))];
+            let ids = uniqueCoins.map(c => coinIds[c]).filter(Boolean).join(',');
+
+            try {
+                let response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=' + ids + '&vs_currencies=usd');
+                let data = await response.json();
+
+                uniqueCoins.forEach(coin => {
+                    let id = coinIds[coin];
+                    if (data[id]) currentPrices[coin] = data[id].usd;
+                });
+
+                renderTrades();
+                renderStats();
+            } catch (e) {
+                renderTrades();
+                renderStats();
+            }
+        }
+
+        function renderStats() {
+            let invested = trades.reduce((s, t) => s + t.price * t.amount, 0);
+            let current = trades.reduce((s, t) => s + (currentPrices[t.coin] || t.price) * t.amount, 0);
+            let pnl = current - invested;
+
+            document.getElementById('stat-count').textContent = trades.length;
+            document.getElementById('stat-invested').textContent = '$' + invested.toFixed(2);
+            document.getElementById('stat-current').textContent = '$' + current.toFixed(2);
+
+            let pnlEl = document.getElementById('stat-pnl');
+            pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
+            pnlEl.className = 'stat-value ' + (pnl >= 0 ? 'profit' : 'loss');
+
+            if (Object.keys(currentPrices).length > 0 && current > 0) {
+                let now = new Date();
+                let shouldAdd = priceHistory.length === 0 ||
+                    (now - new Date(priceHistory[priceHistory.length-1].timestamp)) > 300000;
+
+                if (shouldAdd) {
+                    priceHistory.push({
+                        timestamp: now.toISOString(),
+                        label: now.toLocaleDateString('ru-RU') + ' ' + now.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'}),
+                        value: parseFloat(current.toFixed(2))
+                    });
+                    if (priceHistory.length > 50) priceHistory.shift();
+                    localStorage.setItem('priceHistory', JSON.stringify(priceHistory));
+                }
+            }
+
+            renderChart();
+        }
+
+        function renderTrades() {
+            let container = document.getElementById('trades-container');
+
+            if (trades.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">🪙</div><p>Сделок пока нет — добавь первую!</p></div>';
+                return;
+            }
+
+            let html = '<table><thead><tr>';
+            ['Монета','Цена входа','Текущая цена','Кол-во','Вложено','Сейчас','P&L','Заметка','Дата',''].forEach(h => {
+                html += '<th>' + h + '</th>';
+            });
+            html += '</tr></thead><tbody>';
+
+            trades.forEach((trade, i) => {
+                let invested = trade.price * trade.amount;
+                let curPrice = currentPrices[trade.coin] || null;
+                let curValue = curPrice ? curPrice * trade.amount : null;
+                let pnl = curValue ? curValue - invested : null;
+                let pnlPct = pnl ? ((pnl / invested) * 100).toFixed(1) : null;
+
+                let pnlHtml = pnl !== null
+                    ? '<span class="' + (pnl >= 0 ? 'profit' : 'loss') + '">'
+                      + (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2)
+                      + ' (' + (pnl >= 0 ? '+' : '') + pnlPct + '%)</span>'
+                    : '<span style="color:#475569">—</span>';
+
+                html += '<tr>';
+                html += '<td data-label="Монета"><span class="coin-badge">' + trade.coin + '</span></td>';
+                html += '<td data-label="Цена входа">$' + trade.price.toLocaleString() + '</td>';
+                html += '<td data-label="Тек. цена">' + (curPrice ? '$' + curPrice.toLocaleString() : '<span style="color:#475569">—</span>') + '</td>';
+                html += '<td data-label="Кол-во">' + trade.amount + '</td>';
+                html += '<td data-label="Вложено">$' + invested.toFixed(2) + '</td>';
+                html += '<td data-label="Сейчас">' + (curValue ? '$' + curValue.toFixed(2) : '<span style="color:#475569">—</span>') + '</td>';
+                html += '<td data-label="P&L">' + pnlHtml + '</td>';
+                html += '<td data-label="Заметка">' + (trade.note || '<span style="color:#475569">—</span>') + '</td>';
+                html += '<td data-label="Дата">' + trade.date + '</td>';
+               html += '<td data-label="">';
+html += '<div style="display:flex; align-items:center; gap:8px;">';
+html += '<button class="btn-delete" onclick="deleteTrade(' + i + ')">✕</button>';
+html += '<button class="btn-diary" onclick="openDiary(' + i + ')">📓</button>';
+html += '</div>';
+html += '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+        function exportCSV() {
+    if (trades.length === 0) {
+        alert('Нет сделок для экспорта!');
+        return;
+    }
+
+    // Заголовки колонок
+    let csv = 'Монета,Цена входа,Текущая цена,Количество,Вложено,Сейчас,P&L,P&L %,Заметка,Дата\n';
+
+    trades.forEach(trade => {
+        let invested = trade.price * trade.amount;
+        let curPrice = currentPrices[trade.coin] || trade.price;
+        let curValue = curPrice * trade.amount;
+        let pnl = curValue - invested;
+        let pnlPct = ((pnl / invested) * 100).toFixed(1);
+
+        csv += [
+            trade.coin,
+            trade.price,
+            curPrice,
+            trade.amount,
+            invested.toFixed(2),
+            curValue.toFixed(2),
+            pnl.toFixed(2),
+            pnlPct + '%',
+            '"' + (trade.note || '') + '"',
+            trade.date
+        ].join(',') + '\n';
+    });
+
+    // Создаём файл и скачиваем
+    let blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'crypto-journal-' + new Date().toLocaleDateString('ru-RU') + '.csv';
+    link.click();
+}
+        let currentDiaryIndex = null;
+
+function openDiary(index) {
+    currentDiaryIndex = index;
+    let trade = trades[index];
+
+    // Показываем название монеты в заголовке
+    document.getElementById('diaryModalCoin').textContent = trade.coin;
+
+    // Загружаем записи этой сделки
+    renderDiaryEntries();
+
+    // Открываем модальное окно
+    document.getElementById('diaryModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDiary() {
+    document.getElementById('diaryModal').classList.remove('active');
+    document.body.style.overflow = '';
+    document.getElementById('diaryText').value = '';
+    currentDiaryIndex = null;
+}
+
+function saveDiaryEntry() {
+    let text = document.getElementById('diaryText').value.trim();
+
+    if (!text) {
+        alert('Напиши что-нибудь!');
+        return;
+    }
+
+    let trade = trades[currentDiaryIndex];
+
+    // Создаём массив записей если его нет
+    if (!trade.diary) trade.diary = [];
+
+    trade.diary.push({
+        text: text,
+        date: new Date().toLocaleDateString('ru-RU'),
+        time: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})
+    });
+
+    // Сохраняем
+    localStorage.setItem('trades', JSON.stringify(trades));
+
+    // Очищаем поле
+    document.getElementById('diaryText').value = '';
+
+    // Обновляем список записей
+    renderDiaryEntries();
+}
+
+function deleteDiaryEntry(entryIndex) {
+    if (!confirm('Удалить запись?')) return;
+
+    trades[currentDiaryIndex].diary.splice(entryIndex, 1);
+    localStorage.setItem('trades', JSON.stringify(trades));
+    renderDiaryEntries();
+}
+
+function renderDiaryEntries() {
+    let container = document.getElementById('diaryEntries');
+    let trade = trades[currentDiaryIndex];
+    let entries = trade.diary || [];
+
+    if (entries.length === 0) {
+        container.innerHTML = '<div class="empty-diary">📝 Записей пока нет — добавь первое наблюдение!</div>';
+        return;
+    }
+
+    // Показываем записи от новых к старым
+    let html = '';
+    [...entries].reverse().forEach((entry, i) => {
+        let realIndex = entries.length - 1 - i;
+        html += '<div class="diary-entry">';
+        html += '<button class="diary-entry-delete" onclick="deleteDiaryEntry(' + realIndex + ')">✕</button>';
+        html += '<div class="diary-entry-date">' + entry.date + ' в ' + entry.time + '</div>';
+        html += '<div class="diary-entry-text">' + entry.text + '</div>';
+        html += '</div>';
+    });
+
+    container.innerHTML = html;
+}
+
+// Закрываем по клику на фон
+document.getElementById('diaryModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDiary();
+});
+        function renderChart() {
+            let card = document.getElementById('chart-card');
+
+            if (priceHistory.length < 2) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = 'block';
+
+            let labels = priceHistory.map(p => p.label);
+            let values = priceHistory.map(p => p.value);
+            let isProfit = values[values.length-1] >= values[0];
+            let color = isProfit ? '#22c55e' : '#ef4444';
+
+            if (chart) {
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = values;
+                chart.data.datasets[0].borderColor = color;
+                chart.data.datasets[0].backgroundColor = isProfit ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)';
+                chart.update();
+                return;
+            }
+
+            chart = new Chart(document.getElementById('portfolioChart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: values,
+                        borderColor: color,
+                        backgroundColor: isProfit ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
+                        borderWidth: 2,
+                        pointBackgroundColor: color,
+                        pointRadius: 4,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            callbacks: { label: ctx => ' $' + ctx.parsed.y.toFixed(2) }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#475569', maxTicksLimit: 6, font: { size: 11 } },
+                            grid: { color: 'rgba(255,255,255,0.04)' }
+                        },
+                        y: {
+                            ticks: { color: '#475569', callback: v => '$' + v, font: { size: 11 } },
+                            grid: { color: 'rgba(255,255,255,0.04)' }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>
