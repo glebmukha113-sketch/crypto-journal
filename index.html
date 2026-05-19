@@ -227,10 +227,13 @@
             border-bottom: 1px solid rgba(255,255,255,0.06);
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+       table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    overflow-x: auto;
+    display: block;
+}
 
         th {
             padding: 12px 16px;
@@ -268,6 +271,20 @@
 
         .profit { color: #22c55e; font-weight: 600; }
         .loss { color: #ef4444; font-weight: 600; }
+        .btn-edit {
+    background: rgba(240, 185, 11, 0.1);
+    color: #f0b90b;
+    border: 1px solid rgba(240, 185, 11, 0.2);
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.btn-edit:hover {
+    background: rgba(240, 185, 11, 0.2);
+}
        .btn-diary {
     background: rgba(99, 102, 241, 0.1);
     color: #818cf8;
@@ -684,9 +701,33 @@
                     <input type="number" id="price" placeholder="95000">
                 </div>
                 <div class="input-group">
-                    <div class="input-label">Количество</div>
-                    <input type="number" id="amount" placeholder="0.01">
-                </div>
+    <div class="input-label" style="display:flex; align-items:center; gap:8px;">
+        Количество
+        <div style="display:flex; background:rgba(255,255,255,0.06); border-radius:6px; padding:2px;">
+            <button id="modeCoins" onclick="switchMode('coins')" style="
+                background: rgba(240,185,11,0.8);
+                color: black;
+                border: none;
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: 700;
+                cursor: pointer;
+            ">монеты</button>
+            <button id="modeMoney" onclick="switchMode('money')" style="
+                background: transparent;
+                color: #64748b;
+                border: none;
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: 700;
+                cursor: pointer;
+            ">сумма $</button>
+        </div>
+    </div>
+    <input type="number" id="amount" placeholder="0.01">
+</div>
                 <div class="input-group">
                     <div class="input-label">Заметка</div>
                     <input type="text" id="note" placeholder="Почему купил?">
@@ -698,8 +739,39 @@
         <!-- ТАБЛИЦА -->
         <div class="trades-card">
             <div class="trades-header">
-                <div class="card-title" style="margin:0;">📋 Мои сделки</div>
-            </div>
+    <div class="card-title" style="margin:0;">📋 Мои сделки</div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <select id="filterCoin" onchange="renderTrades()" style="
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+        ">
+            <option value="" style="background:#0f172a">Все монеты</option>
+        </select>
+        <select id="sortBy" onchange="renderTrades()" style="
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+        ">
+            <option value="date_desc" style="background:#0f172a">Сначала новые</option>
+            <option value="date_asc" style="background:#0f172a">Сначала старые</option>
+            <option value="pnl_desc" style="background:#0f172a">P&L по убыванию</option>
+            <option value="pnl_asc" style="background:#0f172a">P&L по возрастанию</option>
+            <option value="invested_desc" style="background:#0f172a">Сумма по убыванию</option>
+            <option value="invested_asc" style="background:#0f172a">Сумма по возрастанию</option>
+        </select>
+    </div>
+</div>
             <div id="trades-container">
                 <div class="empty-state">
                     <div class="empty-icon">🪙</div>
@@ -709,6 +781,159 @@
         </div>
 
     </div>
+    <!-- МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">✏️ Редактировать сделку</div>
+            <button class="btn-close" onclick="closeEdit()">✕</button>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:16px;">
+
+            <div class="input-group">
+                <div class="input-label">Монета</div>
+                <select id="editCoin" style="
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: #fff;
+                    padding: 12px 14px;
+                    border-radius: 10px;
+                    font-size: 14px;
+                    width: 100%;
+                    outline: none;
+                    cursor: pointer;
+                ">
+                    <optgroup label="⭐ Топ монеты" style="background:#0f172a">
+                        <option value="BTC" style="background:#0f172a">BTC — Bitcoin</option>
+                        <option value="ETH" style="background:#0f172a">ETH — Ethereum</option>
+                        <option value="BNB" style="background:#0f172a">BNB — BNB</option>
+                        <option value="SOL" style="background:#0f172a">SOL — Solana</option>
+                        <option value="XRP" style="background:#0f172a">XRP — Ripple</option>
+                        <option value="ADA" style="background:#0f172a">ADA — Cardano</option>
+                        <option value="DOGE" style="background:#0f172a">DOGE — Dogecoin</option>
+                        <option value="TON" style="background:#0f172a">TON — Toncoin</option>
+                        <option value="AVAX" style="background:#0f172a">AVAX — Avalanche</option>
+                        <option value="MATIC" style="background:#0f172a">MATIC — Polygon</option>
+                        <option value="DOT" style="background:#0f172a">DOT — Polkadot</option>
+                        <option value="LTC" style="background:#0f172a">LTC — Litecoin</option>
+                        <option value="LINK" style="background:#0f172a">LINK — Chainlink</option>
+                        <option value="UNI" style="background:#0f172a">UNI — Uniswap</option>
+                        <option value="ATOM" style="background:#0f172a">ATOM — Cosmos</option>
+                    </optgroup>
+                    <optgroup label="🆕 Новые популярные" style="background:#0f172a">
+                        <option value="SUI" style="background:#0f172a">SUI — Sui</option>
+                        <option value="ARB" style="background:#0f172a">ARB — Arbitrum</option>
+                        <option value="OP" style="background:#0f172a">OP — Optimism</option>
+                        <option value="WLD" style="background:#0f172a">WLD — Worldcoin</option>
+                        <option value="INJ" style="background:#0f172a">INJ — Injective</option>
+                        <option value="TIA" style="background:#0f172a">TIA — Celestia</option>
+                        <option value="APT" style="background:#0f172a">APT — Aptos</option>
+                        <option value="SEI" style="background:#0f172a">SEI — Sei</option>
+                        <option value="JUP" style="background:#0f172a">JUP — Jupiter</option>
+                        <option value="PYTH" style="background:#0f172a">PYTH — Pyth Network</option>
+                        <option value="STRK" style="background:#0f172a">STRK — Starknet</option>
+                        <option value="MANTA" style="background:#0f172a">MANTA — Manta Network</option>
+                        <option value="ALT" style="background:#0f172a">ALT — AltLayer</option>
+                    </optgroup>
+                    <optgroup label="🏦 DeFi" style="background:#0f172a">
+                        <option value="AAVE" style="background:#0f172a">AAVE — Aave</option>
+                        <option value="MKR" style="background:#0f172a">MKR — Maker</option>
+                        <option value="SNX" style="background:#0f172a">SNX — Synthetix</option>
+                        <option value="CRV" style="background:#0f172a">CRV — Curve</option>
+                        <option value="COMP" style="background:#0f172a">COMP — Compound</option>
+                        <option value="BAL" style="background:#0f172a">BAL — Balancer</option>
+                        <option value="SUSHI" style="background:#0f172a">SUSHI — SushiSwap</option>
+                        <option value="1INCH" style="background:#0f172a">1INCH — 1inch</option>
+                        <option value="LDO" style="background:#0f172a">LDO — Lido DAO</option>
+                        <option value="RPL" style="background:#0f172a">RPL — Rocket Pool</option>
+                    </optgroup>
+                    <optgroup label="⛓️ Layer 1" style="background:#0f172a">
+                        <option value="NEAR" style="background:#0f172a">NEAR — Near Protocol</option>
+                        <option value="FTM" style="background:#0f172a">FTM — Fantom</option>
+                        <option value="ALGO" style="background:#0f172a">ALGO — Algorand</option>
+                        <option value="XTZ" style="background:#0f172a">XTZ — Tezos</option>
+                        <option value="EOS" style="background:#0f172a">EOS — EOS</option>
+                        <option value="XLM" style="background:#0f172a">XLM — Stellar</option>
+                        <option value="VET" style="background:#0f172a">VET — VeChain</option>
+                        <option value="HBAR" style="background:#0f172a">HBAR — Hedera</option>
+                        <option value="ICP" style="background:#0f172a">ICP — Internet Computer</option>
+                        <option value="FIL" style="background:#0f172a">FIL — Filecoin</option>
+                    </optgroup>
+                    <optgroup label="🐸 Мемкоины" style="background:#0f172a">
+                        <option value="PEPE" style="background:#0f172a">PEPE — Pepe</option>
+                        <option value="SHIB" style="background:#0f172a">SHIB — Shiba Inu</option>
+                        <option value="FLOKI" style="background:#0f172a">FLOKI — Floki</option>
+                        <option value="BONK" style="background:#0f172a">BONK — Bonk</option>
+                        <option value="WIF" style="background:#0f172a">WIF — Dogwifhat</option>
+                        <option value="BRETT" style="background:#0f172a">BRETT — Brett</option>
+                    </optgroup>
+                    <optgroup label="🤖 AI & Web3" style="background:#0f172a">
+                        <option value="RNDR" style="background:#0f172a">RNDR — Render</option>
+                        <option value="FET" style="background:#0f172a">FET — Fetch.ai</option>
+                        <option value="AGIX" style="background:#0f172a">AGIX — SingularityNET</option>
+                        <option value="GRT" style="background:#0f172a">GRT — The Graph</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <div class="input-label">Цена входа ($)</div>
+                <input type="number" id="editPrice" placeholder="95000" style="
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: #fff;
+                    padding: 12px 14px;
+                    border-radius: 10px;
+                    font-size: 14px;
+                    width: 100%;
+                    outline: none;
+                ">
+            </div>
+
+            <div class="input-group">
+                <div class="input-label">Количество монет</div>
+                <input type="number" id="editAmount" placeholder="0.01" style="
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: #fff;
+                    padding: 12px 14px;
+                    border-radius: 10px;
+                    font-size: 14px;
+                    width: 100%;
+                    outline: none;
+                ">
+            </div>
+
+            <div class="input-group">
+                <div class="input-label">Заметка</div>
+                <input type="text" id="editNote" placeholder="Почему купил?" style="
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: #fff;
+                    padding: 12px 14px;
+                    border-radius: 10px;
+                    font-size: 14px;
+                    width: 100%;
+                    outline: none;
+                ">
+            </div>
+
+            <button onclick="saveEdit()" style="
+                background: linear-gradient(135deg, #f0b90b, #f8d03b);
+                color: #000;
+                border: none;
+                padding: 14px;
+                border-radius: 10px;
+                font-size: 15px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: opacity 0.2s;
+            ">Сохранить изменения</button>
+
+        </div>
+    </div>
+</div>
 <!-- МОДАЛЬНОЕ ОКНО ДНЕВНИКА -->
 <div class="modal-overlay" id="diaryModal">
     <div class="modal">
@@ -819,22 +1044,26 @@
             let note = document.getElementById('note').value;
 
             if (!coin || !price || !amount) {
-                alert('Заполни монету, цену и количество!');
-                return;
-            }
+    alert('Заполни монету, цену и количество!');
+    return;
+}
 
-            if (!coinIds[coin]) {
-                alert('Монета ' + coin + ' не найдена.\n\nДоступны: ' + Object.keys(coinIds).join(', '));
-                return;
-            }
+// Если режим "сумма $" — вычисляем количество монет
+let finalAmount;
+if (inputMode === 'money') {
+    finalAmount = parseFloat(amount) / parseFloat(price);
+    finalAmount = parseFloat(finalAmount.toFixed(8));
+} else {
+    finalAmount = parseFloat(amount);
+}
 
-            trades.push({
-                coin,
-                price: parseFloat(price),
-                amount: parseFloat(amount),
-                note,
-                date: new Date().toLocaleDateString('ru-RU')
-            });
+trades.push({
+    coin,
+    price: parseFloat(price),
+    amount: finalAmount,
+    note,
+    date: new Date().toLocaleDateString('ru-RU')
+});
 
             localStorage.setItem('trades', JSON.stringify(trades));
 
@@ -912,54 +1141,108 @@ document.getElementById('note').value = '';
         }
 
         function renderTrades() {
-            let container = document.getElementById('trades-container');
+    let container = document.getElementById('trades-container');
 
-            if (trades.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="empty-icon">🪙</div><p>Сделок пока нет — добавь первую!</p></div>';
-                return;
-            }
+    if (trades.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🪙</div><p>Сделок пока нет — добавь первую!</p></div>';
+        updateFilterOptions();
+        return;
+    }
 
-            let html = '<table><thead><tr>';
-            ['Монета','Цена входа','Текущая цена','Кол-во','Вложено','Сейчас','P&L','Заметка','Дата',''].forEach(h => {
-                html += '<th>' + h + '</th>';
-            });
-            html += '</tr></thead><tbody>';
+    // Обновляем список монет в фильтре
+    updateFilterOptions();
 
-            trades.forEach((trade, i) => {
-                let invested = trade.price * trade.amount;
-                let curPrice = currentPrices[trade.coin] || null;
-                let curValue = curPrice ? curPrice * trade.amount : null;
-                let pnl = curValue ? curValue - invested : null;
-                let pnlPct = pnl ? ((pnl / invested) * 100).toFixed(1) : null;
+    // Применяем фильтр
+    let filterCoin = document.getElementById('filterCoin').value;
+    let sortBy = document.getElementById('sortBy').value;
 
-                let pnlHtml = pnl !== null
-                    ? '<span class="' + (pnl >= 0 ? 'profit' : 'loss') + '">'
-                      + (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2)
-                      + ' (' + (pnl >= 0 ? '+' : '') + pnlPct + '%)</span>'
-                    : '<span style="color:#475569">—</span>';
+    let filtered = trades.map((trade, originalIndex) => ({ ...trade, originalIndex }));
 
-                html += '<tr>';
-                html += '<td data-label="Монета"><span class="coin-badge">' + trade.coin + '</span></td>';
-                html += '<td data-label="Цена входа">$' + trade.price.toLocaleString() + '</td>';
-                html += '<td data-label="Тек. цена">' + (curPrice ? '$' + curPrice.toLocaleString() : '<span style="color:#475569">—</span>') + '</td>';
-                html += '<td data-label="Кол-во">' + trade.amount + '</td>';
-                html += '<td data-label="Вложено">$' + invested.toFixed(2) + '</td>';
-                html += '<td data-label="Сейчас">' + (curValue ? '$' + curValue.toFixed(2) : '<span style="color:#475569">—</span>') + '</td>';
-                html += '<td data-label="P&L">' + pnlHtml + '</td>';
-                html += '<td data-label="Заметка">' + (trade.note || '<span style="color:#475569">—</span>') + '</td>';
-                html += '<td data-label="Дата">' + trade.date + '</td>';
-               html += '<td data-label="">';
-html += '<div style="display:flex; align-items:center; gap:8px;">';
-html += '<button class="btn-delete" onclick="deleteTrade(' + i + ')">✕</button>';
-html += '<button class="btn-diary" onclick="openDiary(' + i + ')">📓</button>';
-html += '</div>';
-html += '</td>';
-                html += '</tr>';
-            });
+    if (filterCoin) {
+        filtered = filtered.filter(t => t.coin === filterCoin);
+    }
 
-            html += '</tbody></table>';
-            container.innerHTML = html;
+    // Сортировка
+    filtered.sort((a, b) => {
+        let aInvested = a.price * a.amount;
+        let bInvested = b.price * b.amount;
+        let aCurPrice = currentPrices[a.coin] || a.price;
+        let bCurPrice = currentPrices[b.coin] || b.price;
+        let aPnl = (aCurPrice * a.amount) - aInvested;
+        let bPnl = (bCurPrice * b.amount) - bInvested;
+
+        switch(sortBy) {
+            case 'date_asc': return a.originalIndex - b.originalIndex;
+            case 'date_desc': return b.originalIndex - a.originalIndex;
+            case 'pnl_desc': return bPnl - aPnl;
+            case 'pnl_asc': return aPnl - bPnl;
+            case 'invested_desc': return bInvested - aInvested;
+            case 'invested_asc': return aInvested - bInvested;
+            default: return b.originalIndex - a.originalIndex;
         }
+    });
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>Нет сделок по выбранному фильтру</p></div>';
+        return;
+    }
+
+    let html = '<table><thead><tr>';
+    ['Монета','Цена входа','Текущая цена','Кол-во','Вложено','Сейчас','P&L','Заметка','Дата',''].forEach(h => {
+        html += '<th>' + h + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+
+    filtered.forEach((trade) => {
+        let i = trade.originalIndex;
+        let invested = trade.price * trade.amount;
+        let curPrice = currentPrices[trade.coin] || null;
+        let curValue = curPrice ? curPrice * trade.amount : null;
+        let pnl = curValue ? curValue - invested : null;
+        let pnlPct = pnl ? ((pnl / invested) * 100).toFixed(1) : null;
+
+        let pnlHtml = pnl !== null
+            ? '<span class="' + (pnl >= 0 ? 'profit' : 'loss') + '">'
+              + (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2)
+              + ' (' + (pnl >= 0 ? '+' : '') + pnlPct + '%)</span>'
+            : '<span style="color:#475569">—</span>';
+
+        html += '<tr>';
+        html += '<td data-label="Монета"><span class="coin-badge">' + trade.coin + '</span></td>';
+        html += '<td data-label="Цена входа">$' + trade.price.toLocaleString() + '</td>';
+        html += '<td data-label="Тек. цена">' + (curPrice ? '$' + curPrice.toLocaleString() : '<span style="color:#475569">—</span>') + '</td>';
+        html += '<td data-label="Кол-во">' + trade.amount + '</td>';
+        html += '<td data-label="Вложено">$' + invested.toFixed(2) + '</td>';
+        html += '<td data-label="Сейчас">' + (curValue ? '$' + curValue.toFixed(2) : '<span style="color:#475569">—</span>') + '</td>';
+        html += '<td data-label="P&L">' + pnlHtml + '</td>';
+        html += '<td data-label="Заметка">' + (trade.note || '<span style="color:#475569">—</span>') + '</td>';
+        html += '<td data-label="Дата">' + trade.date + '</td>';
+        html += '<td data-label=""><div style="display:flex; align-items:center; gap:8px;">';
+html += '<button class="btn-delete" onclick="deleteTrade(' + i + ')">✕</button>';
+html += '<button class="btn-edit" onclick="openEdit(' + i + ')">✏️</button>';
+html += '<button class="btn-diary" onclick="openDiary(' + i + ')">📓</button>';
+html += '</div></td>';
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function updateFilterOptions() {
+    let select = document.getElementById('filterCoin');
+    if (!select) return;
+
+    let currentValue = select.value;
+    let uniqueCoins = [...new Set(trades.map(t => t.coin))];
+
+    select.innerHTML = '<option value="" style="background:#0f172a">Все монеты</option>';
+    uniqueCoins.forEach(coin => {
+        select.innerHTML += '<option value="' + coin + '" style="background:#0f172a">' + coin + '</option>';
+    });
+
+    select.value = currentValue;
+}
         function exportCSV() {
     if (trades.length === 0) {
         alert('Нет сделок для экспорта!');
@@ -997,6 +1280,87 @@ html += '</td>';
     link.download = 'crypto-journal-' + new Date().toLocaleDateString('ru-RU') + '.csv';
     link.click();
 }
+let inputMode = 'coins'; // coins или money
+
+function switchMode(mode) {
+    inputMode = mode;
+
+    let amountInput = document.getElementById('amount');
+    let modeCoins = document.getElementById('modeCoins');
+    let modeMoney = document.getElementById('modeMoney');
+
+    if (mode === 'coins') {
+        amountInput.placeholder = '0.01';
+        modeCoins.style.background = 'rgba(240,185,11,0.8)';
+        modeCoins.style.color = 'black';
+        modeMoney.style.background = 'transparent';
+        modeMoney.style.color = '#64748b';
+    } else {
+        amountInput.placeholder = '500';
+        modeCoins.style.background = 'transparent';
+        modeCoins.style.color = '#64748b';
+        modeMoney.style.background = 'rgba(240,185,11,0.8)';
+        modeMoney.style.color = 'black';
+    }
+
+    document.getElementById('amount').value = '';
+}
+    let currentEditIndex = null;
+
+function openEdit(index) {
+    currentEditIndex = index;
+    let trade = trades[index];
+
+    document.getElementById('editCoin').value = trade.coin;
+    document.getElementById('editPrice').value = trade.price;
+    document.getElementById('editAmount').value = trade.amount;
+    document.getElementById('editNote').value = trade.note || '';
+
+    document.getElementById('editModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEdit() {
+    document.getElementById('editModal').classList.remove('active');
+    document.body.style.overflow = '';
+    currentEditIndex = null;
+}
+
+function saveEdit() {
+    let coin = document.getElementById('editCoin').value;
+    let price = document.getElementById('editPrice').value;
+    let amount = document.getElementById('editAmount').value;
+    let note = document.getElementById('editNote').value;
+
+    if (!coin || !price || !amount) {
+        alert('Заполни все поля!');
+        return;
+    }
+
+    // Сохраняем дневник чтобы не потерять при редактировании
+    let existingDiary = trades[currentEditIndex].diary || [];
+
+    trades[currentEditIndex] = {
+        coin,
+        price: parseFloat(price),
+        amount: parseFloat(amount),
+        note,
+        date: trades[currentEditIndex].date,
+        diary: existingDiary
+    };
+
+    localStorage.setItem('trades', JSON.stringify(trades));
+
+    closeEdit();
+    renderTrades();
+    renderStats();
+    loadPrices();
+}
+
+// Закрываем по клику на фон
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEdit();
+});
         let currentDiaryIndex = null;
 
 function openDiary(index) {
@@ -1149,6 +1513,7 @@ document.getElementById('diaryModal').addEventListener('click', function(e) {
                 }
             });
         }
+        
     </script>
 
 </body>
