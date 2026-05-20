@@ -661,23 +661,147 @@
     }
 }
     </style>
+    <!-- Firebase -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDsBWPTno3alCYx8P1nr9l9Mk3wZ9j-q38",
+        authDomain: "crypto-journal-b4597.firebaseapp.com",
+        projectId: "crypto-journal-b4597",
+        storageBucket: "crypto-journal-b4597.firebasestorage.app",
+        messagingSenderId: "785623679346",
+        appId: "1:785623679346:web:364108694ff2048c32ddeb"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    let currentUser = null;
+
+    // Следим за состоянием авторизации
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUser = user;
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('userSection').style.display = 'flex';
+            document.getElementById('userName').textContent = user.displayName;
+            document.getElementById('userAvatar').src = user.photoURL;
+
+            // Загружаем данные из облака
+            await loadFromCloud();
+        } else {
+            currentUser = null;
+            document.getElementById('authSection').style.display = 'flex';
+            document.getElementById('userSection').style.display = 'none';
+        }
+    });
+
+    // Вход через Google
+    window.signInWithGoogle = async function() {
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (e) {
+            alert('Ошибка входа: ' + e.message);
+        }
+    }
+
+    // Выход
+    window.signOutUser = async function() {
+        if (confirm('Выйти из аккаунта?')) {
+            await signOut(auth);
+        }
+    }
+
+    // Сохранить данные в облако
+    window.saveToCloud = async function() {
+        if (!currentUser) return;
+        try {
+            await setDoc(doc(db, 'users', currentUser.uid), {
+                trades: JSON.parse(localStorage.getItem('trades') || '[]'),
+                priceHistory: JSON.parse(localStorage.getItem('priceHistory') || '[]'),
+                updatedAt: new Date().toISOString()
+            });
+        } catch (e) {
+            console.log('Ошибка сохранения:', e);
+        }
+    }
+
+    // Загрузить данные из облака
+    async function loadFromCloud() {
+        if (!currentUser) return;
+        try {
+            let docSnap = await getDoc(doc(db, 'users', currentUser.uid));
+            if (docSnap.exists()) {
+                let data = docSnap.data();
+
+                // Сохраняем в localStorage и обновляем приложение
+                localStorage.setItem('trades', JSON.stringify(data.trades || []));
+                localStorage.setItem('priceHistory', JSON.stringify(data.priceHistory || []));
+
+                // Обновляем переменные приложения
+                window.syncFromCloud(data.trades || [], data.priceHistory || []);
+            }
+        } catch (e) {
+            console.log('Ошибка загрузки:', e);
+        }
+    }
+</script>
 </head>
 <body>
 
     <!-- ШАПКА -->
     <div class="header">
-        <div class="logo">
-            <div class="logo-icon">📊</div>
-            CryptoJournal
-        </div>
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <button class="btn-refresh" onclick="loadPrices()">🔄 Обновить</button>
-<button class="btn-refresh" onclick="exportCSV()">📥 Экспорт CSV</button>
-            <div class="header-badge">Beta</div>
-        </div>
+    <div class="logo">
+        <div class="logo-icon">📊</div>
+        CryptoJournal
     </div>
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
 
-    <div class="container">
+        <!-- Кнопка входа -->
+        <div id="authSection" style="display:flex; align-items:center; gap:8px;">
+            <button onclick="signInWithGoogle()" style="
+                background: #fff;
+                color: #000;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            ">
+                <img src="https://www.google.com/favicon.ico" width="16" height="16">
+                Войти через Google
+            </button>
+        </div>
+
+        <!-- Профиль пользователя -->
+        <div id="userSection" style="display:none; align-items:center; gap:10px;">
+            <img id="userAvatar" src="" width="32" height="32" style="border-radius:50%; border: 2px solid #f0b90b;">
+            <span id="userName" style="font-size:13px; color:#e2e8f0;"></span>
+            <button onclick="signOutUser()" style="
+                background: transparent;
+                color: #64748b;
+                border: 1px solid rgba(255,255,255,0.1);
+                padding: 6px 12px;
+                border-radius: 8px;
+                font-size: 12px;
+                cursor: pointer;
+            ">Выйти</button>
+        </div>
+
+        <button class="btn-refresh" onclick="loadPrices()">🔄 Обновить</button>
+        <button class="btn-refresh" onclick="exportCSV()">📥 Экспорт CSV</button>
+        <div class="header-badge">Beta</div>
+    </div>
+</div>
 
         <!-- СТАТИСТИКА -->
         <div class="stats-grid">
@@ -1178,6 +1302,14 @@
 
         let trades = JSON.parse(localStorage.getItem('trades')) || [];
         let priceHistory = JSON.parse(localStorage.getItem('priceHistory')) || [];
+        // Синхронизация данных из облака
+window.syncFromCloud = function(cloudTrades, cloudPriceHistory) {
+    trades = cloudTrades;
+    priceHistory = cloudPriceHistory;
+    renderTrades();
+    renderStats();
+    if (trades.length > 0) loadPrices();
+}
         let currentPrices = {};
         let chart = null;
 
@@ -1217,6 +1349,7 @@ trades.push({
 });
 
             localStorage.setItem('trades', JSON.stringify(trades));
+            if (window.saveToCloud) saveToCloud();
 
             document.getElementById('coin').selectedIndex = 0;
 document.getElementById('price').value = '';
