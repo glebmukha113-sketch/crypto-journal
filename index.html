@@ -703,12 +703,18 @@
 
     // Вход через Google
     window.signInWithGoogle = async function() {
-        try {
-            await signInWithPopup(auth, provider);
-        } catch (e) {
-            alert('Ошибка входа: ' + e.message);
+    try {
+        provider.setCustomParameters({ prompt: 'select_account' });
+        await signInWithPopup(auth, provider);
+    } catch (e) {
+        if (e.code === 'auth/cancelled-popup-request' || 
+            e.code === 'auth/popup-closed-by-user') {
+            // Пользователь закрыл окно — это нормально, не показываем ошибку
+            return;
         }
+        alert('Ошибка входа: ' + e.message);
     }
+}
 
     // Выход
     window.signOutUser = async function() {
