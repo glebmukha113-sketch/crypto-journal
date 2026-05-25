@@ -664,7 +664,7 @@
     <!-- Firebase -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -679,20 +679,14 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const provider = new GoogleAuthProvider();
-
     let currentUser = null;
 
-    // Следим за состоянием авторизации
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentUser = user;
             document.getElementById('authSection').style.display = 'none';
             document.getElementById('userSection').style.display = 'flex';
-            document.getElementById('userName').textContent = user.displayName;
-            document.getElementById('userAvatar').src = user.photoURL;
-
-            // Загружаем данные из облака
+            document.getElementById('userName').textContent = user.email;
             await loadFromCloud();
         } else {
             currentUser = null;
@@ -701,20 +695,54 @@
         }
     });
 
-    // Вход через Google
-    window.signInWithGoogle = async function() {
-    try {
-        provider.setCustomParameters({ prompt: 'select_account' });
-        await signInWithPopup(auth, provider);
-    } catch (e) {
-        if (e.code === 'auth/cancelled-popup-request' || 
-            e.code === 'auth/popup-closed-by-user') {
-            // Пользователь закрыл окно — это нормально, не показываем ошибку
+    // Регистрация
+    window.registerUser = async function() {
+        let email = document.getElementById('authEmail').value.trim();
+        let password = document.getElementById('authPassword').value;
+
+        if (!email || !password) {
+            alert('Введи email и пароль!');
             return;
         }
-        alert('Ошибка входа: ' + e.message);
+
+        if (password.length < 6) {
+            alert('Пароль минимум 6 символов!');
+            return;
+        }
+
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+            closeAuthModal();
+        } catch (e) {
+            if (e.code === 'auth/email-already-in-use') {
+                alert('Этот email уже зарегистрирован!');
+            } else {
+                alert('Ошибка: ' + e.message);
+            }
+        }
     }
-}
+
+    // Вход
+    window.loginUser = async function() {
+        let email = document.getElementById('authEmail').value.trim();
+        let password = document.getElementById('authPassword').value;
+
+        if (!email || !password) {
+            alert('Введи email и пароль!');
+            return;
+        }
+
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            closeAuthModal();
+        } catch (e) {
+            if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+                alert('Неверный email или пароль!');
+            } else {
+                alert('Ошибка: ' + e.message);
+            }
+        }
+    }
 
     // Выход
     window.signOutUser = async function() {
@@ -723,7 +751,7 @@
         }
     }
 
-    // Сохранить данные в облако
+    // Сохранить в облако
     window.saveToCloud = async function() {
         if (!currentUser) return;
         try {
@@ -737,25 +765,28 @@
         }
     }
 
-    // Загрузить данные из облака
+    // Загрузить из облака
     async function loadFromCloud() {
         if (!currentUser) return;
         try {
             let docSnap = await getDoc(doc(db, 'users', currentUser.uid));
             if (docSnap.exists()) {
                 let data = docSnap.data();
-
-                // Сохраняем в localStorage и обновляем приложение
                 localStorage.setItem('trades', JSON.stringify(data.trades || []));
                 localStorage.setItem('priceHistory', JSON.stringify(data.priceHistory || []));
-
-                // Обновляем переменные приложения
                 window.syncFromCloud(data.trades || [], data.priceHistory || []);
             }
         } catch (e) {
             console.log('Ошибка загрузки:', e);
         }
     }
+
+    window.closeAuthModal = function() {
+        document.getElementById('authModal').classList.remove('active');
+        document.getElementById('authEmail').value = '';
+        document.getElementById('authPassword').value = '';
+    }
+</script>
 </script>
 </head>
 <body>
@@ -768,10 +799,9 @@
     </div>
     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
 
-        <!-- Кнопка входа -->
-        <div id="authSection" style="display:flex; align-items:center; gap:8px;">
-            <button onclick="signInWithGoogle()" style="
-                background: #fff;
+        <div id="authSection" style="display:flex; align-items:center;">
+            <button onclick="document.getElementById('authModal').classList.add('active')" style="
+                background: linear-gradient(135deg, #f0b90b, #f8d03b);
                 color: #000;
                 border: none;
                 padding: 8px 16px;
@@ -779,18 +809,10 @@
                 font-size: 13px;
                 font-weight: 700;
                 cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            ">
-                <img src="https://www.google.com/favicon.ico" width="16" height="16">
-                Войти через Google
-            </button>
+            ">Войти / Регистрация</button>
         </div>
 
-        <!-- Профиль пользователя -->
         <div id="userSection" style="display:none; align-items:center; gap:10px;">
-            <img id="userAvatar" src="" width="32" height="32" style="border-radius:50%; border: 2px solid #f0b90b;">
             <span id="userName" style="font-size:13px; color:#e2e8f0;"></span>
             <button onclick="signOutUser()" style="
                 background: transparent;
@@ -1062,6 +1084,71 @@
         </div>
 
     </div>
+    <!-- МОДАЛЬНОЕ ОКНО АВТОРИЗАЦИИ -->
+<div class="modal-overlay" id="authModal">
+    <div class="modal" style="max-width: 400px;">
+        <div class="modal-header">
+            <div class="modal-title">👤 Вход в аккаунт</div>
+            <button class="btn-close" onclick="closeAuthModal()">✕</button>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:14px;">
+
+            <div class="input-group">
+                <div class="input-label">Email</div>
+                <input type="email" id="authEmail" placeholder="your@email.com" style="
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: #fff;
+                    padding: 12px 14px;
+                    border-radius: 10px;
+                    font-size: 14px;
+                    width: 100%;
+                    outline: none;
+                ">
+            </div>
+
+            <div class="input-group">
+                <div class="input-label">Пароль</div>
+                <input type="password" id="authPassword" placeholder="Минимум 6 символов" style="
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: #fff;
+                    padding: 12px 14px;
+                    border-radius: 10px;
+                    font-size: 14px;
+                    width: 100%;
+                    outline: none;
+                ">
+            </div>
+
+            <button onclick="loginUser()" style="
+                background: linear-gradient(135deg, #f0b90b, #f8d03b);
+                color: #000;
+                border: none;
+                padding: 14px;
+                border-radius: 10px;
+                font-size: 15px;
+                font-weight: 700;
+                cursor: pointer;
+            ">Войти</button>
+
+            <div style="text-align:center; color:#475569; font-size:13px;">или</div>
+
+            <button onclick="registerUser()" style="
+                background: transparent;
+                color: #f0b90b;
+                border: 1px solid rgba(240,185,11,0.4);
+                padding: 14px;
+                border-radius: 10px;
+                font-size: 15px;
+                font-weight: 700;
+                cursor: pointer;
+            ">Создать аккаунт</button>
+
+        </div>
+    </div>
+</div>
     <!-- МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ -->
 <div class="modal-overlay" id="editModal">
     <div class="modal">
